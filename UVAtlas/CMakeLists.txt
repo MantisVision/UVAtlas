@@ -56,6 +56,8 @@ add_library(UVAtlas STATIC
 )
 
 target_include_directories(UVAtlas 
+PRIVATE
+	${eigen_Include_Path}
 PUBLIC
     inc/
 	geodesics/
