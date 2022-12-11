@@ -1285,26 +1285,8 @@ void CUVAtlasRepacker::Reverse(std::vector<int>& data, size_t len)
     }
 }
 
-/***************************************************************************\
-    Function Description:
-        Find a best position and angle to put current chart into atlas.
-
-    Arguments:
-        [in]	index	-	the index of chart to be packed
-
-    Return Value:
-\***************************************************************************/
-void CUVAtlasRepacker::PutChart(uint32_t index)
+bool CUVAtlasRepacker::PutChart(ChartsInfo* pCInfo, int index, int PutSide)
 {
-    ChartsInfo* pCInfo = &m_ChartsInfo[index];
-
-    if (!pCInfo->valid)
-        return;
-
-    m_triedInternalSpace = int(1e8f);
-
-    std::uniform_int_distribution<> dis(0, 1);
-
     for (uint32_t i = 0; i < m_iRotateNum; i++)
     {
         // for every position of chart, first do tessellation on it
@@ -1315,14 +1297,6 @@ void CUVAtlasRepacker::PutChart(uint32_t index)
             0, pPosInfo->numX, 0, pPosInfo->numY, true);
 
         m_currRotate = int(i);
-
-        int PutSide = 0;
-        if (m_currAspectRatio > m_AspectRatio) // put on left or right side
-            PutSide = 0;
-        else if (m_currAspectRatio < m_AspectRatio)
-            PutSide = 1;
-        else
-            PutSide = dis(m_randomEngine);
 
         if (PutSide == 0) // put on left or right side
         {
@@ -1393,6 +1367,47 @@ void CUVAtlasRepacker::PutChart(uint32_t index)
                 for (size_t k = 0; k < size_t(pPosInfo->numX); k++)
                     m_triedUVBoard[j][k] = m_currChartUVBoard[j][k];
         }
+    }
+
+    return m_triedAspectRatio != -1e10 && m_triedAspectRatio != 1e10;
+}
+
+/***************************************************************************\
+    Function Description:
+        Find a best position and angle to put current chart into atlas.
+
+    Arguments:
+        [in]	index	-	the index of chart to be packed
+
+    Return Value:
+\***************************************************************************/
+void CUVAtlasRepacker::PutChart(uint32_t index)
+{
+    ChartsInfo* pCInfo = &m_ChartsInfo[index];
+
+    if (!pCInfo->valid)
+        return;
+
+    m_triedInternalSpace = int(1e8f);
+
+    std::uniform_int_distribution<> dis(0, 1);
+    int PutSide = 0;
+    if (m_currAspectRatio > m_AspectRatio) // put on left or right side
+        PutSide = 0;
+    else if (m_currAspectRatio < m_AspectRatio)
+        PutSide = 1;
+    else
+        PutSide = dis(m_randomEngine);
+
+    bool success = PutChart(pCInfo, index, PutSide);
+
+    // if we failed, try the other side. in non square atlases the choice is sometimes degenrate and leads
+    // to an endless failure cycle
+    if (!success) {
+        printf("PutChart on side %d failed\n", PutSide);
+        PutSide = (PutSide + 1) % 2;
+        success = PutChart(pCInfo, index, PutSide);
+        printf("PutChart on side %d %s\n", PutSide, success ? "suceeded" : "failed");
     }
 
     PutChartInPosition(index);

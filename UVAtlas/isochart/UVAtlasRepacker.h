@@ -186,6 +186,7 @@ namespace IsochartRepacker
         HRESULT CreateUVAtlas();
         HRESULT PrepareRepack();
         void PutChart(uint32_t index);
+        bool PutChart(ChartsInfo* pCInfo, int index, int side);
         void UpdateSpaceInfo(int direction);
         void TryPut(int chartPutSide, int PutSide, int Rotation, int chartWidth,
             int width, int from, int to, int chartSideLen);
